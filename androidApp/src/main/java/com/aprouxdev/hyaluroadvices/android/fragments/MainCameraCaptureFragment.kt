@@ -1,7 +1,12 @@
 package com.aprouxdev.hyaluroadvices.android.fragments
 
 import android.R
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,8 +20,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.aprouxdev.hyaluroadvices.android.databinding.FragmentMainCameraCaptureBinding
+import com.aprouxdev.hyaluroadvices.android.services.CameraService
 import com.aprouxdev.hyaluroadvices.android.services.FaceContourGraphic
 import com.aprouxdev.hyaluroadvices.android.viewmodels.MainCameraCaptureViewModel
+import com.aprouxdev.hyaluroadvices.android.viewmodels.MainCameraCaptureViewModel.GraphicOverlayState.*
 import com.google.mlkit.vision.face.Face
 import kotlinx.coroutines.launch
 
@@ -53,10 +60,11 @@ class MainCameraCaptureFragment : Fragment(), OnItemSelectedListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         /** Take a picture
-        *  - Send Picture to the model
-        *
-        * Display face cam
-        * Add animation on face cam and informations
+         *  - Send Picture to the model
+         *  //TODO
+         *
+         * Display face cam
+         * Add animation on face cam and informations
          * */
 
         setupDataObservers()
@@ -70,33 +78,77 @@ class MainCameraCaptureFragment : Fragment(), OnItemSelectedListener {
 
 
         binding.buttonText.setOnClickListener(View.OnClickListener { showToast("NOT DEV") })
-        binding.buttonFace.setOnClickListener(View.OnClickListener { viewModel.runFaceContourDetection() })
+        binding.buttonFace.setOnClickListener(View.OnClickListener {
+            // TODO inside view model
+            CameraService.takePicture()?.let {
+                viewModel.runFaceContourDetection(it)
+            }
+        })
+
         val items = arrayOf("Test Image 1 (Text)", "Test Image 2 (Face)")
         context?.let {
-        val adapter =
-             ArrayAdapter(it, R.layout.simple_spinner_dropdown_item, items)
+            val adapter =
+                ArrayAdapter(it, R.layout.simple_spinner_dropdown_item, items)
             binding.spinner.adapter = adapter
             binding.spinner.onItemSelectedListener = this
         }
     }
 
+    private fun drawableToBitmap(drawable: Drawable): Bitmap? {
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+        try {
+            val bitmap = Bitmap.createBitmap(
+                drawable.intrinsicWidth,
+                drawable.intrinsicHeight,
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+
+            return bitmap
+        } catch (e: Exception) {
+            Log.e("TAG_DEBUG", "drawableToBitmap: $e")
+        }
+        return null
+    }
+
+
     //region DATA OBSERVERS
     private fun setupDataObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
-               // LAUNCH
-                viewModel.faceContourState.collect { faceContourState ->
-                    when (faceContourState) {
-                        is MainCameraCaptureViewModel.ModelState.Error -> showToast(faceContourState.message ?: "Error")
-                        MainCameraCaptureViewModel.ModelState.None -> Unit
-                        is MainCameraCaptureViewModel.ModelState.Ongoing -> Unit // TODO in MainActivity
-                        is MainCameraCaptureViewModel.ModelState.Success -> {
-                            faceContourState.faces.mapNotNull { it as? Face }.let {
-                                processFaceContourDetectionResult(it)
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // faceContourState
+                launch {
+                    viewModel.faceContourState.collect { faceContourState ->
+                        when (faceContourState) {
+                            is MainCameraCaptureViewModel.ModelState.Error -> showToast(
+                                faceContourState.message ?: "Error"
+                            )
+
+                            MainCameraCaptureViewModel.ModelState.None -> Unit
+                            is MainCameraCaptureViewModel.ModelState.Ongoing -> Unit // TODO in MainActivity with interface
+                            is MainCameraCaptureViewModel.ModelState.Success -> {
+                                faceContourState.faces.mapNotNull { it as? Face }.let {
+                                    processFaceContourDetectionResult(it)
+                                }
                             }
                         }
                     }
                 }
+
+                //GRAPHIC OVERLAY
+                launch {
+                    viewModel.graphicOverlayState.collect { graphicOverlayState ->
+                        when (graphicOverlayState) {
+                            NONE -> Unit
+                            CLEAR -> binding.graphicOverlay.clear()
+                        }
+                    }
+                }
+                //
             }
         }
     }

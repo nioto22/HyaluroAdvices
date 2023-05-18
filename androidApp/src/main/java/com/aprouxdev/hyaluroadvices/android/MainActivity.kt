@@ -2,6 +2,7 @@ package com.aprouxdev.hyaluroadvices.android
 
 import androidx.appcompat.app.AppCompatActivity
 import com.aprouxdev.hyaluroadvices.android.databinding.ActivityMainBinding
+import com.aprouxdev.hyaluroadvices.android.viewmodels.RootViewModel
 
 
 class MainActivity : AppCompatActivity() {

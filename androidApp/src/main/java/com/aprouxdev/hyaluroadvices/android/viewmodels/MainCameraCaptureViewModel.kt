@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import androidx.lifecycle.ViewModel
+import com.aprouxdev.hyaluroadvices.android.services.FacialRecognitionService
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.mlkit.vision.common.InputImage
@@ -41,7 +42,7 @@ class MainCameraCaptureViewModel : ViewModel() {
     //region GRAPHIC OVERLAY
     private val _graphicOverlayState: MutableStateFlow<GraphicOverlayState> =
         MutableStateFlow(GraphicOverlayState.NONE)
-    private val graphicOverlayState get() = _graphicOverlayState
+    val graphicOverlayState get() = _graphicOverlayState
     enum class GraphicOverlayState {
         NONE,
         CLEAR,
@@ -51,12 +52,6 @@ class MainCameraCaptureViewModel : ViewModel() {
     private val _selectedImage = MutableStateFlow<Bitmap?>(null)
     val selectedImage get() = _selectedImage
 
-    private var _imageView: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
-    val image get() = _imageView
-
-    fun setBitmap(bitmap: Bitmap) {
-        _imageView.value = bitmap
-    }
 
     fun setUiViewSize(width: Int, height: Int) {
         mUiViewWidth = width
@@ -65,17 +60,12 @@ class MainCameraCaptureViewModel : ViewModel() {
     //endregion
 
 
-    fun runFaceContourDetection() {
-        _imageView.value?.let {
-            val image: InputImage = InputImage.fromBitmap(it, 0)
-            val options = FaceDetectorOptions.Builder()
-                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
-                .build()
-
+    fun runFaceContourDetection(bitmap: Bitmap?) {
+        bitmap?.let {
             _faceContourState.value = ModelState.Ongoing()
 
-            val detector: FaceDetector = FaceDetection.getClient(options)
+            val image: InputImage = InputImage.fromBitmap(it, 0)
+            val detector: FaceDetector = FacialRecognitionService.getDetector()
             detector.process(image)
                 .addOnSuccessListener(
                     OnSuccessListener<List<Any>> { faces ->

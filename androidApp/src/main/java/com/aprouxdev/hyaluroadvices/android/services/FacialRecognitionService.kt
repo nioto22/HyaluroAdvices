@@ -7,7 +7,9 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 
 object FacialRecognitionService {
 
-    private val detector: FaceDetector
+
+
+    private var detector: FaceDetector
 
 
     init {
@@ -24,18 +26,7 @@ object FacialRecognitionService {
         detector = FaceDetection.getClient(options)
     }
 
-    fun detectFaces(image: InputImage) {
-        detector.process(image)
-            .addOnSuccessListener { faces ->
-                for (face in faces) {
-                    val bounds = face.boundingBox
-                    val rotY = face.headEulerAngleY  // Head is rotated to the right rotY degrees
-                    val rotZ = face.headEulerAngleZ  // Head is tilted sideways rotZ degrees
-                    // Etc ...
-                }
-            }
-            .addOnFailureListener { e ->
-                // Handle error
-            }
+    fun getDetector(): FaceDetector {
+        return detector
     }
 }
