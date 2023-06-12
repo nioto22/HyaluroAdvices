@@ -3,4 +3,4 @@
 * No Shared architecture setup
 * No ios develop
 * Android MVVM Architecture
-* ML face detection app
+* ML face detection KMM app
